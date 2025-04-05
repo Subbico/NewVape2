@@ -14,7 +14,7 @@ end
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/zephhhhhhhh/NewVape2/'..readfile('newvape/profiles/commit.txt')..'/'..select(1, path:gsub('newvape/', '')), true)
+			return game:HttpGet('https://raw.githubusercontent.com/Subbico/NewVape2/'..readfile('newvape/profiles/commit.txt')..'/'..select(1, path:gsub('newvape/', '')), true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
@@ -5952,7 +5952,7 @@ run(function()
 	end
 	
 	
-	local capelist = game:GetService("HttpService"):JSONDecode(game:HttpGet("https://github.com/zephhhhhhhh/whitelists/raw/refs/heads/main/capesveryverytempono.json"))
+	local capelist = game:GetService("HttpService"):JSONDecode(game:HttpGet("https://github.com/Subbico/whitelists/raw/refs/heads/main/capesveryverytempono.json"))
 	local function capePlayer(plr)
 	    if capelist[tostring(plr.UserId)] then
 			if plr.Character then

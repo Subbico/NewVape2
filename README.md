@@ -15,7 +15,7 @@ Everything (for the most part) works fine, but if anything breaks that isnt rela
 ## ⚡ Execute
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/zephhhhhhhh/NewVape2/main/NewMainScript.lua", true))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Subbico/NewVape2/main/NewMainScript.lua", true))()
 ```
 
 ## 🌐 Community

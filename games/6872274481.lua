@@ -8133,7 +8133,7 @@ end)
 
 How to use : 
 
-* Download "Sky" folder from https://github.com/zephhhhhhhh/NewVape2/tree/main/assets/Sky
+* Download "Sky" folder from https://github.com/Subbico/NewVape2/tree/main/assets/Sky
 
 * Uncomment the module and test it!
 
