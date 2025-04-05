@@ -7288,28 +7288,7 @@ run(function()
 	local SelfBreak
 	local InstantBreak
 	local LimitItem
-	local AutoTool
 	local customlist, parts = {}, {}
-	local old, event
-	
-	-- AutoTool switch function from provided script
-	local function switchHotbarItem(block)
-		if block and not block:GetAttribute('NoBreak') and not block:GetAttribute('Team'..(lplr:GetAttribute('Team') or 0)..'NoBreak') then
-			local tool, slot = store.tools[bedwars.ItemMeta[block.Name].block.breakType], nil
-			if tool then
-				for i, v in store.inventory.hotbar do
-					if v.item and v.item.itemType == tool.itemType then slot = i - 1 break end
-				end
-	
-				if hotbarSwitch(slot) then
-					if inputService:IsMouseButtonPressed(0) then 
-						event:Fire() 
-					end
-					return true
-				end
-			end
-		end
-	end
 	
 	local function customHealthbar(self, blockRef, health, maxHealth, changeHealth, block)
 		if block:GetAttribute('NoHealthbar') then return end
@@ -7414,34 +7393,33 @@ run(function()
 	local hit = 0
 	
 	local function attemptBreak(tab, localPosition)
-		if not tab then return end
-		for _, v in tab do
-			if (v.Position - localPosition).Magnitude < Range.Value and bedwars.BlockController:isBlockBreakable({blockPosition = v.Position / 3}, lplr) then
-				if not SelfBreak.Enabled and v:GetAttribute('PlacedByUserId') == lplr.UserId then continue end
-				if (v:GetAttribute('BedShieldEndTime') or 0) > workspace:GetServerTimeNow() then continue end
-				if LimitItem.Enabled and not (store.hand.tool and bedwars.ItemMeta[store.hand.tool.Name].breakBlock) then continue end
-				
-				-- Use AutoTool switch function
-				if AutoTool.Enabled then
-					switchHotbarItem(v)
-				end
+		if not tab then return false end
+		
+		for _, v in pairs(tab) do
+			if v and v:IsA("Instance") and v.Position and (v.Position - localPosition).Magnitude < Range.Value then
+				local blockPosition = v.Position / 3
+				if bedwars.BlockController:isBlockBreakable({blockPosition = blockPosition}, lplr) then
+					if not SelfBreak.Enabled and v:GetAttribute('PlacedByUserId') == lplr.UserId then continue end
+					if (v:GetAttribute('BedShieldEndTime') or 0) > workspace:GetServerTimeNow() then continue end
+					if LimitItem.Enabled and not (store.hand.tool and bedwars.ItemMeta[store.hand.tool.Name].breakBlock) then continue end
 	
-				hit += 1
-				local target, path, endpos = bedwars.breakBlock(v, Effect.Enabled, Animation.Enabled, CustomHealth.Enabled and customHealthbar or nil, InstantBreak.Enabled)
-				if path then
-					local currentnode = target
-					for _, part in parts do
-						part.Position = currentnode or Vector3.zero
-						if currentnode then
-							part.BoxHandleAdornment.Color3 = currentnode == endpos and Color3.new(1, 0.2, 0.2) or currentnode == target and Color3.new(0.2, 0.2, 1) or Color3.new(0.2, 1, 0.2)
+					hit += 1
+					local target, path, endpos = bedwars.breakBlock(v, Effect.Enabled, Animation.Enabled, CustomHealth.Enabled and customHealthbar or nil, InstantBreak.Enabled)
+					if path then
+						local currentnode = target
+						for _, part in pairs(parts) do
+							part.Position = currentnode or Vector3.zero
+							if currentnode then
+								part.BoxHandleAdornment.Color3 = currentnode == endpos and Color3.new(1, 0.2, 0.2) or currentnode == target and Color3.new(0.2, 0.2, 1) or Color3.new(0.2, 1, 0.2)
+							end
+							currentnode = path[currentnode]
 						end
-						currentnode = path[currentnode]
 					end
+	
+					task.wait(InstantBreak.Enabled and (store.damageBlockFail > tick() and 4.5 or 0) or 0.25)
+	
+					return true
 				end
-	
-				task.wait(InstantBreak.Enabled and (store.damageBlockFail > tick() and 4.5 or 0) or 0.25)
-	
-				return true
 			end
 		end
 	
@@ -7478,24 +7456,46 @@ run(function()
 					end
 				end)
 	
-				repeat
-					task.wait(1 / UpdateRate.Value)
-					if not Breaker.Enabled then break end
-					if entitylib.isAlive then
-						local localPosition = entitylib.character.RootPart.Position
+				task.spawn(function()
+					repeat
+						task.wait(1 / UpdateRate.Value)
+						if not Breaker.Enabled then break end
+						if entitylib.isAlive then
+							local localPosition = entitylib.character.RootPart.Position
+							
+							local success = false
+							
+							-- Fix for bed breaking - prioritize beds and ensure they're properly processed
+							if Bed.Enabled then
+								-- Refresh beds collection to ensure we have the latest beds
+								beds = collection('bed', Breaker)
+								success = attemptBreak(beds, localPosition)
+								if success then continue end
+							end
+							
+							if customlist and #customlist > 0 then
+								success = attemptBreak(customlist, localPosition)
+								if success then continue end
+							end
+							
+							if LuckyBlock.Enabled then
+								success = attemptBreak(luckyblock, localPosition)
+								if success then continue end
+							end
+							
+							if IronOre.Enabled then
+								success = attemptBreak(ironores, localPosition)
+								if success then continue end
+							end
 	
-						if attemptBreak(Bed.Enabled and beds, localPosition) then continue end
-						if attemptBreak(customlist, localPosition) then continue end
-						if attemptBreak(LuckyBlock.Enabled and luckyblock, localPosition) then continue end
-						if attemptBreak(IronOre.Enabled and ironores, localPosition) then continue end
-	
-						for _, v in parts do
-							v.Position = Vector3.zero
+							for _, v in pairs(parts) do
+								v.Position = Vector3.zero
+							end
 						end
-					end
-				until not Breaker.Enabled
+					until not Breaker.Enabled
+				end)
 			else
-				for _, v in parts do
+				for _, v in pairs(parts) do
 					v:ClearAllChildren()
 					v:Destroy()
 				end
@@ -7564,35 +7564,6 @@ run(function()
 	LimitItem = Breaker:CreateToggle({
 		Name = 'Limit to items',
 		Tooltip = 'Only breaks when tools are held'
-	})
-	AutoTool = Breaker:CreateToggle({
-		Name = 'Auto Tool',
-		Default = true,
-		Function = function(callback)
-			if callback then
-				event = Instance.new('BindableEvent')
-				Breaker:Clean(event)
-				Breaker:Clean(event.Event:Connect(function()
-					contextActionService:CallFunction('block-break', Enum.UserInputState.Begin, newproxy(true))
-				end))
-				old = bedwars.BlockBreaker.hitBlock
-				bedwars.BlockBreaker.hitBlock = function(self, maid, raycastparams, ...)
-					local block = self.clientManager:getBlockSelector():getMouseInfo(1, {ray = raycastparams})
-					if block and block.target then
-						if switchHotbarItem(block.target.blockInstance) then return end
-					end
-					return old(self, maid, raycastparams, ...)
-				end
-			else
-				bedwars.BlockBreaker.hitBlock = old
-				old = nil
-				if event then
-					event:Destroy()
-					event = nil
-				end
-			end
-		end,
-		Tooltip = 'Automatically switches to the fastest tool for breaking'
 	})
 end)
 
