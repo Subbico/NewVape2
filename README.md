@@ -32,7 +32,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/Subbico/NewVape2/main
 
 
 [Zeph](https://slat.cc/zephhh) - Developer
-
+grated for making this possible
 
 
 
